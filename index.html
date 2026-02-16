@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Calculator</title>
+    <style>
+        :root {
+            --bg-color: #000;
+            --text-main: #fff;
+            --text-grey: #a5a5a5;
+            --btn-num: #333333;
+            --btn-func: #a5a5a5;
+            --btn-op: #ff9f0a;
+        }
+
+        body { background-color: var(--bg-color); margin: 0; display: flex; justify-content: center; align-items: flex-end; height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; overflow: hidden; -webkit-user-select: none; }
+        .calculator { width: 100%; max-width: 414px; padding-bottom: 40px; }
+        .status-bar { display: flex; justify-content: space-between; padding: 0 30px; color: white; font-size: 18px; height: 40px; }
+        .secret-gate { cursor: pointer; width: 60px; height: 40px; }
+
+        .display-container { padding: 20px 30px; text-align: right; min-height: 180px; display: flex; flex-direction: column; justify-content: flex-end; }
+        .process { color: var(--text-grey); font-size: 28px; min-height: 34px; margin-bottom: 8px; white-space: nowrap; overflow: hidden; }
+        .main-display { color: var(--text-main); font-size: 85px; font-weight: 300; letter-spacing: -2px; line-height: 1; overflow: hidden; }
+
+        .buttons-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; padding: 0 20px; }
+        .btn { border: none; border-radius: 50%; height: 78px; width: 78px; font-size: 36px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: brightness 0.1s; outline: none; }
+        .btn:active { filter: brightness(1.4); }
+        .num { background-color: var(--btn-num); color: white; }
+        .func { background-color: var(--btn-func); color: black; font-size: 30px; }
+        .op { background-color: var(--btn-op); color: white; font-size: 40px; }
+        .zero { grid-column: span 2; width: 100%; border-radius: 40px; justify-content: flex-start; padding-left: 32px; }
+    </style>
+</head>
+<body>
+
+<div class="calculator">
+    <div class="status-bar">
+        <div class="secret-gate" onclick="calc.openSettings()">🕒</div>
+        <div>🔢</div>
+    </div>
+
+    <div class="display-container">
+        <div class="process" id="process"></div>
+        <div class="main-display" id="main-display">0</div>
+    </div>
+    
+    <div class="buttons-grid">
+        <button class="btn func" onclick="calc.onPress('AC')">AC</button>
+        <button class="btn func" onclick="calc.onPress('posneg')">+/-</button>
+        <button class="btn func" onclick="calc.onPress('percent')">%</button>
+        <button class="btn op" onclick="calc.onPress('/')">÷</button>
+
+        <button class="btn num" onclick="calc.onPress('7')">7</button>
+        <button class="btn num" onclick="calc.onPress('8')">8</button>
+        <button class="btn num" onclick="calc.onPress('9')">9</button>
+        <button class="btn op" onclick="calc.onPress('*')">×</button>
+
+        <button class="btn num" onclick="calc.onPress('4')">4</button>
+        <button class="btn num" onclick="calc.onPress('5')">5</button>
+        <button class="btn num" onclick="calc.onPress('6')">6</button>
+        <button class="btn op" onclick="calc.onPress('-')">-</button>
+
+        <button class="btn num" onclick="calc.onPress('1')">1</button>
+        <button class="btn num" onclick="calc.onPress('2')">2</button>
+        <button class="btn num" onclick="calc.onPress('3')">3</button>
+        <button class="btn op" onclick="calc.onPress('+')">+</button>
+
+        <button class="btn num zero" onclick="calc.onPress('0')">0</button>
+        <button class="btn num" onclick="calc.onPress('.')">.</button>
+        <button class="btn op" onclick="calc.onPress('=')">=</button>
+    </div>
+</div>
+
+<script>
+class MagicCalculator {
+    constructor() {
+        this.target = 200;      
+        this.currentVal = "0";  
+        this.processVal = "";   
+        this.runningSum = 0;    
+        this.state = "INIT";    // INIT, INPUT, EQUALED, MAGIC_READY, MAGIC_FIXED
+        
+        this.mainDisp = document.getElementById('main-display');
+        this.procDisp = document.getElementById('process');
+    }
+
+    openSettings() {
+        let val = prompt("【魔术师】设置目标值 T (请确保 T > A + B):", this.target);
+        if (val !== null) {
+            this.target = parseFloat(val);
+            this.reset();
+        }
+    }
+
+    updateUI() {
+        this.mainDisp.innerText = this.currentVal;
+        this.procDisp.innerText = this.processVal;
+        // 动态字体大小
+        this.mainDisp.style.fontSize = this.currentVal.length > 7 ? "50px" : "85px";
+    }
+
+    onPress(key) {
+        // --- 核心 Bug 修复：状态锁定 ---
+        if (this.state === "MAGIC_FIXED") {
+            if (key === "=") this.handleEqual();
+            this.updateUI();
+            return; 
+        }
+
+        // --- 触发陷阱：在 MAGIC_READY 状态下按任何非等号键 ---
+        if (this.state === "MAGIC_READY" && key !== "=") {
+            let magicGap = this.target - this.runningSum;
+            // 结果展示，补数会被强行填入
+            this.currentVal = magicGap.toString();
+            this.processVal = this.runningSum + " + " + this.currentVal;
+            this.state = "MAGIC_FIXED"; 
+            this.updateUI();
+            return;
+        }
+
+        // --- 正常逻辑流 ---
+        if (key === "AC") {
+            this.reset();
+        } else if (key === "=") {
+            this.handleEqual();
+        } else if (key === "+") {
+            this.handlePlus();
+        } else if (!isNaN(key) || key === ".") {
+            this.handleNum(key);
+        }
+        this.updateUI();
+    }
+
+    handleNum(num) {
+        if (this.state === "EQUALED" || this.state === "INIT") {
+            this.currentVal = num;
+            this.state = "INPUT";
+        } else {
+            if (this.currentVal === "0") this.currentVal = num;
+            else this.currentVal += num;
+        }
+    }
+
+    handlePlus() {
+        let val = parseFloat(this.currentVal);
+        if (this.state === "EQUALED") {
+            this.runningSum = val;
+            this.processVal = val + " + ";
+            this.state = "MAGIC_READY"; 
+        } else {
+            this.runningSum = val;
+            this.processVal = val + " + ";
+            this.state = "INIT";
+        }
+        this.currentVal = "0";
+    }
+
+    handleEqual() {
+        if (this.state === "MAGIC_FIXED") {
+            this.processVal = this.runningSum + " + " + (this.target - this.runningSum) + " =";
+            this.currentVal = this.target.toString();
+            this.state = "EQUALED"; 
+        } else {
+            let val = parseFloat(this.currentVal);
+            let result = this.runningSum + val;
+            this.processVal = this.runningSum + " + " + val + " =";
+            this.currentVal = result.toString();
+            this.state = "EQUALED";
+        }
+    }
+
+    reset() {
+        this.currentVal = "0";
+        this.processVal = "";
+        this.runningSum = 0;
+        this.state = "INIT";
+        this.updateUI();
+    }
+}
+const calc = new MagicCalculator();
+</script>
+</body>
+</html>

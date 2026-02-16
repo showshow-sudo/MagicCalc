@@ -9,6 +9,8 @@
 
 ## 🚀 在线体验地址 **[👉 点击这里直接开始表演 (手机端效果更佳) 👈](https://showshow-sudo.github.io/MagicCalc/)** *(建议在手机浏览器打开后，选择“添加到主屏幕”以获得 1:1 仿真 App 体验)*
 
+<img width="200" height="400" alt="image" src="https://github.com/user-attachments/assets/614044af-3629-4ff7-b460-d7face5f5f65" />
+
 ## 🎭 魔术表演脚本（按键顺序）
 
 为了保证表演成功，请魔术师严格遵守以下 **“黄金序列”**：
